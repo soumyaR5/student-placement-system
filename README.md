@@ -1,14 +1,54 @@
 # Student Management System with Placement Eligibility Engine
 
-A Spring Boot REST API that manages student records (including CGPA and active backlogs) and decides
-whether a student is eligible for a company, based on configurable company-specific placement criteria
-(minimum CGPA and maximum active backlogs). Every eligibility result includes clear reasons.
+A full-stack student and placement management application built with **Java, Spring Boot, PostgreSQL, and a lightweight HTML/CSS/JavaScript frontend**. It manages student academic records and evaluates placement eligibility against configurable, company-specific criteria.
 
-**Stack:** Java 17, Spring Boot 3.3.5, Spring Data JPA (Hibernate), PostgreSQL, Maven, Jakarta Bean Validation, JUnit 5 + Mockito.
+The eligibility decision is calculated by the Spring Boot backend. Each result includes the decision and the reasons the student meets or fails the selected company's requirements.
 
-## Project structure
+## Features
 
+- **Dashboard:** Student and placement overview, including eligibility counts derived from backend data.
+- **Student management:** Register, view, search, update, and delete student records.
+- **Placement eligibility engine:** Evaluate a student against one company or all configured companies.
+- **Configurable placement criteria:** Create, view, update, and delete company requirements.
+- **Validation and error handling:** Request validation, duplicate-record handling, and structured API error responses.
+- **Sample data seeding:** Optional starter records are inserted when the relevant tables are empty.
+- **Automated tests:** JUnit 5 and Mockito tests for service logic and student controller behavior.
+
+## Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| Language | Java 17 (the project may also run on newer compatible JDKs) |
+| Backend | Spring Boot 3.3.5, Spring Web |
+| Persistence | Spring Data JPA, Hibernate |
+| Database | PostgreSQL |
+| Validation | Jakarta Bean Validation |
+| Frontend | HTML5, CSS3, vanilla JavaScript, Fetch API |
+| Build | Maven |
+| Testing | JUnit 5, Mockito, Spring Boot Test |
+
+## Architecture
+
+```text
+Browser (HTML / CSS / JavaScript)
+              |
+         Fetch API / HTTP
+              |
+   Spring Boot REST Controllers
+              |
+           Services
+       (business logic)
+              |
+      Spring Data JPA
+              |
+          PostgreSQL
 ```
+
+The frontend is served by Spring Boot from `src/main/resources/static/`. A separate frontend server or Node.js build step is not required.
+
+## Project Structure
+
+```text
 student-placement-system/
 ├── pom.xml
 ├── .env.example
@@ -17,381 +57,226 @@ student-placement-system/
 └── src/
     ├── main/
     │   ├── java/com/placement/sms/
-    │   │   ├── StudentPlacementApplication.java
-    │   │   ├── config/        DataSeeder.java
-    │   │   ├── controller/    StudentController, PlacementCriteriaController, EligibilityController
-    │   │   ├── dto/           StudentRequest/Response, CriteriaRequest/Response, EligibilityResponse, EligibilityStatus
-    │   │   ├── entity/        Student, AcademicRecord, PlacementInfo, PlacementStatus, PlacementCriteria
-    │   │   ├── exception/     GlobalExceptionHandler, ErrorResponse, ResourceNotFound/Duplicate/InvalidRequest exceptions
-    │   │   ├── repository/    StudentRepository, PlacementCriteriaRepository
-    │   │   └── service/       StudentService, PlacementCriteriaService, EligibilityService, StudentMapper
+    │   │   ├── config/        # Sample-data seeding
+    │   │   ├── controller/    # Student, criteria, and eligibility APIs
+    │   │   ├── dto/           # Request and response models
+    │   │   ├── entity/        # JPA entities and status enums
+    │   │   ├── exception/     # Application exceptions and error handling
+    │   │   ├── repository/    # Spring Data JPA repositories
+    │   │   ├── service/       # Student, criteria, and eligibility logic
+    │   │   └── StudentPlacementApplication.java
     │   └── resources/
     │       ├── application.properties
-    │       └── static/                  frontend, served at http://localhost:8080/
+    │       └── static/
     │           ├── index.html
     │           ├── css/style.css
-    │           └── js/api.js, app.js
+    │           └── js/
+    │               ├── api.js
+    │               └── app.js
     └── test/java/com/placement/sms/
         ├── controller/StudentControllerTest.java
-        └── service/       EligibilityServiceTest, StudentServiceTest
+        └── service/
+            ├── EligibilityServiceTest.java
+            └── StudentServiceTest.java
 ```
 
 ## Prerequisites
 
-- JDK 17 or newer (`java -version`)
-- Maven 3.9+ (`mvn -version`)
-- PostgreSQL 13+ (local install or Docker)
+Install the following before running the application:
 
-## 1. PostgreSQL setup
+- **JDK 17 or newer**
+- **Maven 3.9 or newer**
+- **PostgreSQL 13 or newer**
 
-### Option A: local PostgreSQL
-
-```bash
-psql -U postgres
-```
-
-```sql
-CREATE USER sms_user WITH PASSWORD 'change_me_securely';
-CREATE DATABASE student_placement_db OWNER sms_user;
-\q
-```
-
-### Option B: Docker
-
-```bash
-docker run --name sms-postgres \
-  -e POSTGRES_USER=sms_user \
-  -e POSTGRES_PASSWORD=change_me_securely \
-  -e POSTGRES_DB=student_placement_db \
-  -p 5432:5432 -d postgres:16
-```
-
-Tables are created automatically on first start (`spring.jpa.hibernate.ddl-auto=update`).
-
-## 2. Configure credentials (environment based)
-
-Database credentials are never stored in source code. `application.properties` reads them from
-environment variables, and also loads a local `.env` file if one exists in the project root.
-
-```bash
-cp .env.example .env        # Windows: copy .env.example .env
-```
-
-Edit `.env`:
-
-| Variable | Default | Description |
-|---|---|---|
-| `DB_HOST` | `localhost` | PostgreSQL host |
-| `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_NAME` | `student_placement_db` | Database name |
-| `DB_USERNAME` | *(required)* | Database user |
-| `DB_PASSWORD` | *(required)* | Database password |
-| `SERVER_PORT` | `8080` | HTTP port |
-| `APP_SEED_ENABLED` | `true` | Insert sample data when tables are empty |
-
-The application refuses to start if `DB_USERNAME` or `DB_PASSWORD` is missing. `.env` is listed in `.gitignore`.
-
-Alternatively, export real environment variables instead of using `.env`:
-
-```bash
-# Linux / macOS
-export DB_USERNAME=sms_user DB_PASSWORD=change_me_securely
-# Windows PowerShell
-$env:DB_USERNAME="sms_user"; $env:DB_PASSWORD="change_me_securely"
-```
-
-## 3. Build, test, run
-
-Run all commands from the project root (where `pom.xml` and `.env` live).
-
-**VS Code on Windows (PowerShell terminal):**
+Check your Java and Maven installations:
 
 ```powershell
-cd path\to\student-placement-system
-Copy-Item .env.example .env      # first time only, then edit .env
+java -version
+mvn -version
+```
+
+## Run Locally on Windows
+
+### 1. Create the database
+
+If you have not already created the database, open `psql` and run:
+
+```sql
+CREATE DATABASE student_placement_db;
+```
+
+If the database already exists, do not create it again. The application connects to PostgreSQL on `localhost:5432` by default.
+
+### 2. Configure database credentials
+
+Open a terminal in the project root (the folder containing `pom.xml`) and copy the example environment file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Edit `.env` with the credentials for your local PostgreSQL instance:
+
+```properties
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=student_placement_db
+DB_USERNAME=postgres
+DB_PASSWORD=YOUR_ACTUAL_POSTGRES_PASSWORD
+SERVER_PORT=8080
+APP_SEED_ENABLED=true
+```
+
+Replace `YOUR_ACTUAL_POSTGRES_PASSWORD` with your real PostgreSQL password. The username and password must match your local PostgreSQL configuration.
+
+**Security:** `.env` contains local credentials and must not be committed to Git. The repository's `.gitignore` should exclude it.
+
+### 3. Run tests
+
+```powershell
 mvn clean test
+```
+
+The unit tests use mocks and are designed not to require a running database.
+
+### 4. Start the application
+
+```powershell
 mvn spring-boot:run
 ```
 
-Then open http://localhost:8080/ in your browser.
+Wait until the logs report that Tomcat has started and `StudentPlacementApplication` has started successfully.
 
-```bash
-mvn clean test              # run unit tests (no database needed)
-mvn spring-boot:run         # start the API on http://localhost:8080
-```
+### 5. Open the application
 
-Or build a jar:
+- **Frontend:** http://localhost:8080/
+- **Students API:** http://localhost:8080/api/students
+- **Placement criteria API:** http://localhost:8080/api/criteria
 
-```bash
-mvn clean package
-java -jar target/student-placement-system-1.0.0.jar
-```
+Keep the terminal running while using the application. Stop the server with `Ctrl+C`.
 
-## Frontend (web UI)
+## Frontend Sections
 
-A minimal dashboard built with plain HTML, CSS and JavaScript (Fetch API). It lives in
-`src/main/resources/static/` and is served by the same Spring Boot application, so there is no separate
-server, no build step, and no CORS configuration.
+| Section | Purpose |
+|---|---|
+| Dashboard | Summarizes student and placement eligibility information. |
+| Students | Lists and searches students, with registration, editing, and deletion actions. |
+| Eligibility | Checks a student's eligibility for a selected company or against all configured criteria. |
+| Placement Criteria | Manages company-specific CGPA and active-backlog requirements. |
 
-**Open:** http://localhost:8080/ (after starting the app)
+The UI calls the backend APIs. It does not connect directly to PostgreSQL or independently implement the eligibility rules.
 
-| Page | What it does | Backend calls |
-|---|---|---|
-| Dashboard | Total / eligible / not eligible / placed counts, recent students | `GET /api/students`, `GET /api/criteria`, `GET /api/eligibility/students/{id}` per student |
-| Students | Table, client-side search by name or roll number, register, edit, delete (with confirmation) | `GET/POST /api/students`, `PUT/DELETE /api/students/{id}` |
-| Eligibility | Pick a student (and optionally one company); shows Eligible / Not eligible with the backend's reasons | `GET /api/eligibility/students/{id}` and `.../criteria/{criteriaId}` |
-| Placement Criteria | Table, add, edit, delete company criteria | `GET/POST /api/criteria`, `PUT/DELETE /api/criteria/{id}` |
+## Placement Eligibility Rules
 
-Notes:
+A student is eligible for a company only when **both** conditions are satisfied:
 
-- Eligibility is always computed by the backend. The browser never re-implements the rules.
-- On the dashboard, "Placement eligible" means eligible for at least one configured company, and
-  "Not eligible" means eligible for none. It makes one eligibility request per student, which is fine at
-  college scale; add a summary endpoint if the data grows large.
-- Forms validate required fields and ranges before sending, block double submits, and show backend field
-  errors (400) and conflicts (409) inline. Success messages appear only after the backend confirms.
-- Data is never stored in the browser; every table is loaded from the API.
+1. Student CGPA is greater than or equal to the company's minimum CGPA.
+2. Student active-backlog count is less than or equal to the company's maximum permitted active backlogs.
 
-## Sample data
+The backend returns an eligibility status and explanatory reasons for the result. Criteria can differ between companies.
 
-On the first start with empty tables, the app inserts (IDs assume a fresh database):
-
-**Placement criteria**
-
-| id | Company | Min CGPA | Max active backlogs |
-|---|---|---|---|
-| 1 | Google | 8.50 | 0 |
-| 2 | Microsoft | 8.00 | 0 |
-| 3 | TCS | 7.00 | 1 |
-| 4 | Infosys | 6.50 | 2 |
-| 5 | Zoho | 7.50 | 0 |
-
-**Students**
-
-| id | Roll no. | Name | CGPA | Backlogs | Placement |
-|---|---|---|---|---|---|
-| 1 | 21MCA001 | Aarav Sharma | 8.75 | 0 | NOT_PLACED |
-| 2 | 21MCA002 | Priya Nair | 9.10 | 0 | PLACED (TCS, 7.00 LPA) |
-| 3 | 21MCA003 | Rohan Mehta | 7.20 | 1 | NOT_PLACED |
-| 4 | 21MCA004 | Sneha Iyer | 8.05 | 0 | NOT_PLACED |
-| 5 | 21MCA005 | Karthik Reddy | 6.80 | 2 | NOT_PLACED |
-| 6 | 21MCA006 | Divya Menon | 7.95 | 0 | NOT_PLACED |
-| 7 | 21MCA007 | Arjun Patel | 8.40 | 1 | NOT_PLACED |
-| 8 | 21MCA008 | Meera Krishnan | 9.35 | 0 | PLACED (Zoho, 12.00 LPA) |
-
-## Eligibility rule
-
-A student is **ELIGIBLE** for a company only if both conditions hold:
-
-1. `student CGPA >= criteria minCgpa`
-2. `student activeBacklogs <= criteria maxActiveBacklogs`
-
-Otherwise the student is **INELIGIBLE**, and the `reasons` list explains which rule(s) failed.
-Both rules are always reported, so the response shows the full picture.
-
-## API reference
+## REST API Reference
 
 Base URL: `http://localhost:8080`
 
-### Students: `/api/students`
+### Students — `/api/students`
 
-| Method | Path | Description | Success |
+| Method | Endpoint | Description | Typical success response |
 |---|---|---|---|
-| POST | `/api/students` | Register a student | `201 Created` + `Location` header |
-| GET | `/api/students` | List all students | `200 OK` |
-| GET | `/api/students/{id}` | Get one student | `200 OK` |
-| PUT | `/api/students/{id}` | Replace a student's details | `200 OK` |
-| DELETE | `/api/students/{id}` | Delete a student | `204 No Content` |
+| `GET` | `/api/students` | List students | `200 OK` |
+| `GET` | `/api/students/{id}` | Get one student | `200 OK` |
+| `POST` | `/api/students` | Register a student | `201 Created` |
+| `PUT` | `/api/students/{id}` | Update a student's details | `200 OK` |
+| `DELETE` | `/api/students/{id}` | Delete a student | `204 No Content` |
 
-Request body (POST and PUT):
+Student request fields include `rollNumber`, `fullName`, `email`, `department`, `cgpa`, and `activeBacklogs`. `placementStatus`, `companyPlaced`, and `packageLpa` are also supported according to the request validation rules.
 
-| Field | Type | Rules |
-|---|---|---|
-| `rollNumber` | string | required, max 30, unique (stored upper-case) |
-| `fullName` | string | required, max 100 |
-| `email` | string | required, valid email, unique (stored lower-case) |
-| `department` | string | required, max 100 |
-| `cgpa` | decimal | required, 0.00 to 10.00, max 2 decimals |
-| `activeBacklogs` | integer | required, 0 to 50 |
-| `placementStatus` | enum | optional: `NOT_PLACED` (default) or `PLACED` |
-| `companyPlaced` | string | required when `PLACED`, max 100 |
-| `packageLpa` | decimal | optional, >= 0, max 2 decimals |
+Example request to register a student:
 
-### Placement criteria: `/api/criteria`
+```json
+{
+  "rollNumber": "MCA009",
+  "fullName": "Ishaan Verma",
+  "email": "ishaan.verma@example.com",
+  "department": "MCA",
+  "cgpa": 8.6,
+  "activeBacklogs": 0
+}
+```
 
-| Method | Path | Description | Success |
+Send this JSON as the body of a `POST` request to `/api/students` with `Content-Type: application/json`.
+
+### Placement Criteria — `/api/criteria`
+
+| Method | Endpoint | Description | Typical success response |
 |---|---|---|---|
-| POST | `/api/criteria` | Create company criteria | `201 Created` |
-| GET | `/api/criteria` | List all criteria | `200 OK` |
-| GET | `/api/criteria/{id}` | Get one | `200 OK` |
-| PUT | `/api/criteria/{id}` | Update | `200 OK` |
-| DELETE | `/api/criteria/{id}` | Delete | `204 No Content` |
+| `GET` | `/api/criteria` | List company criteria | `200 OK` |
+| `GET` | `/api/criteria/{id}` | Get one criterion | `200 OK` |
+| `POST` | `/api/criteria` | Create a criterion | `201 Created` |
+| `PUT` | `/api/criteria/{id}` | Update a criterion | `200 OK` |
+| `DELETE` | `/api/criteria/{id}` | Delete a criterion | `204 No Content` |
 
-Request body: `companyName` (required, unique ignoring case), `minCgpa` (0.00 to 10.00), `maxActiveBacklogs` (0 to 50).
+Criteria request fields are `companyName`, `minCgpa`, and `maxActiveBacklogs`.
 
-### Eligibility: `/api/eligibility`
+Example request:
 
-| Method | Path | Description |
+```json
+{
+  "companyName": "Example Technologies",
+  "minCgpa": 7.5,
+  "maxActiveBacklogs": 0
+}
+```
+
+### Eligibility — `/api/eligibility`
+
+| Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/eligibility/students/{studentId}/criteria/{criteriaId}` | Check one student against one company |
-| GET | `/api/eligibility/students/{studentId}` | Check one student against all companies |
+| `GET` | `/api/eligibility/students/{studentId}` | Check one student against all configured companies |
+| `GET` | `/api/eligibility/students/{studentId}/criteria/{criteriaId}` | Check one student against a specific company's criteria |
 
-### Status codes
+### Error responses
 
-| Code | When |
-|---|---|
-| 200 / 201 / 204 | Success |
-| 400 | Validation failed, malformed JSON, bad enum or path value, `PLACED` without `companyPlaced` |
-| 404 | Student, criteria or endpoint not found |
-| 405 / 415 | Unsupported method / media type |
-| 409 | Duplicate roll number, email or company name |
-| 500 | Unexpected server error (details are logged, not returned) |
+The API uses appropriate HTTP status codes for successful requests and common failures, including:
 
-Error body:
+- `400 Bad Request` — validation or malformed request errors.
+- `404 Not Found` — requested student, criterion, or endpoint does not exist.
+- `409 Conflict` — duplicate student roll number, email, or company name.
+- `500 Internal Server Error` — unexpected server-side error.
 
-```json
-{
-  "timestamp": "2026-10-09T10:15:30.123Z",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "path": "/api/students",
-  "fieldErrors": { "cgpa": "cgpa must be at most 10.00" }
-}
-```
+Validation errors may include field-level details to help identify invalid input.
 
-## 4. Try it with curl
+## Tests
 
-Postman users: **Import → Raw text** and paste any curl command below.
+Run all tests with:
 
-```bash
-# Register a student
-curl -i -X POST http://localhost:8080/api/students \
-  -H "Content-Type: application/json" \
-  -d '{"rollNumber":"21MCA009","fullName":"Ishaan Verma","email":"ishaan.verma@example.com","department":"MCA","cgpa":8.60,"activeBacklogs":0}'
-
-# List / get
-curl http://localhost:8080/api/students
-curl http://localhost:8080/api/students/1
-
-# Update (full replace)
-curl -X PUT http://localhost:8080/api/students/5 \
-  -H "Content-Type: application/json" \
-  -d '{"rollNumber":"21MCA005","fullName":"Karthik Reddy","email":"karthik.reddy@example.com","department":"MCA","cgpa":7.10,"activeBacklogs":0}'
-
-# Delete
-curl -i -X DELETE http://localhost:8080/api/students/9
-
-# Create placement criteria
-curl -i -X POST http://localhost:8080/api/criteria \
-  -H "Content-Type: application/json" \
-  -d '{"companyName":"Amazon","minCgpa":8.25,"maxActiveBacklogs":0}'
-
-# List criteria
-curl http://localhost:8080/api/criteria
-
-# Eligibility: Rohan (id 3) vs Google (id 1)
-curl http://localhost:8080/api/eligibility/students/3/criteria/1
-
-# Eligibility: Aarav (id 1) against all companies
-curl http://localhost:8080/api/eligibility/students/1
-
-# Validation error (expect 400)
-curl -i -X POST http://localhost:8080/api/students \
-  -H "Content-Type: application/json" \
-  -d '{"rollNumber":"","fullName":"X","email":"bad","department":"MCA","cgpa":12,"activeBacklogs":-1}'
-
-# Not found (expect 404)
-curl -i http://localhost:8080/api/students/9999
-
-# Duplicate roll number (expect 409)
-curl -i -X POST http://localhost:8080/api/students \
-  -H "Content-Type: application/json" \
-  -d '{"rollNumber":"21MCA001","fullName":"Dup","email":"dup@example.com","department":"MCA","cgpa":8,"activeBacklogs":0}'
-```
-
-Windows `cmd`: put each command on one line and escape inner quotes as `\"`, or use Postman.
-
-### Example: ineligible (two reasons)
-
-`GET /api/eligibility/students/3/criteria/1`
-
-```json
-{
-  "studentId": 3,
-  "studentName": "Rohan Mehta",
-  "rollNumber": "21MCA003",
-  "criteriaId": 1,
-  "companyName": "Google",
-  "status": "INELIGIBLE",
-  "eligible": false,
-  "reasons": [
-    "CGPA 7.20 is below the minimum requirement of 8.50",
-    "Active backlogs 1 exceed the maximum allowed of 0"
-  ]
-}
-```
-
-### Example: eligible
-
-`GET /api/eligibility/students/1/criteria/1`
-
-```json
-{
-  "studentId": 1,
-  "studentName": "Aarav Sharma",
-  "rollNumber": "21MCA001",
-  "criteriaId": 1,
-  "companyName": "Google",
-  "status": "ELIGIBLE",
-  "eligible": true,
-  "reasons": [
-    "CGPA 8.75 meets the minimum requirement of 8.50",
-    "Active backlogs 0 are within the maximum allowed of 0"
-  ]
-}
-```
-
-## 5. Tests
-
-```bash
+```powershell
 mvn clean test
 ```
 
-| Test class | Covers |
-|---|---|
-| `EligibilityServiceTest` | eligible, exact-boundary, low CGPA, too many backlogs, both failing, missing student/criteria, check-all |
-| `StudentServiceTest` | create + normalisation, duplicate roll/email, PLACED without company, not found, update, delete |
-| `StudentControllerTest` | 201 + Location, 400 with field errors, 404 error body, 204 on delete |
+The current test suite includes:
 
-Unit tests use mocks and need no database.
-
-## 6. Upload to GitHub
-
-```bash
-cd student-placement-system
-git init
-git add .
-git status                      # confirm .env and target/ are NOT listed
-git commit -m "Initial commit: Student Management System with Placement Eligibility Engine"
-git branch -M main
-git remote add origin https://github.com/<your-username>/student-placement-system.git
-git push -u origin main
-```
-
-Create the empty repository on GitHub first (no README or .gitignore, since they already exist locally).
+- `EligibilityServiceTest` — eligibility decisions, boundary cases, failure reasons, and missing resources.
+- `StudentServiceTest` — student creation, normalization, duplicate checks, update, delete, and missing records.
+- `StudentControllerTest` — HTTP responses and controller-level error handling.
 
 ## Troubleshooting
 
-| Problem | Fix |
+| Problem | What to check |
 |---|---|
-| `Could not resolve placeholder 'DB_USERNAME'` | `.env` is missing or you are not running from the project root; set the variables |
-| `password authentication failed` | Check `DB_USERNAME` / `DB_PASSWORD` match the PostgreSQL user |
-| `Connection refused` | PostgreSQL is not running or `DB_HOST` / `DB_PORT` is wrong |
-| `Port 8080 already in use` | Set `SERVER_PORT=8081` in `.env` |
-| Sample data not inserted | Tables were not empty, or `APP_SEED_ENABLED=false` |
+| Missing `DB_USERNAME` or `DB_PASSWORD` | Confirm `.env` exists in the project root and contains both variables. |
+| PostgreSQL authentication failure | Check the username and password against your local PostgreSQL account. |
+| Connection refused | Confirm PostgreSQL is running and the host/port are correct. |
+| Port 8080 is already in use | Set `SERVER_PORT=8081` in `.env` and open `http://localhost:8081/`. |
+| Sample data does not appear | The seeder only inserts sample records when the relevant tables are empty; check `APP_SEED_ENABLED`. |
+| Browser shows an API error | Check the running backend logs and the browser's Developer Tools → Network tab. |
 
-## Design notes
+## Security and Production Notes
 
-- `ddl-auto=update` suits local development. For production, use a migration tool such as Flyway and switch to `validate`.
-- There is no authentication by design (out of scope). Do not expose this API publicly as is.
+- Do not commit `.env` or expose database credentials.
+- This project does not include authentication or authorization; do not expose it publicly with real student data without adding appropriate access controls.
+- Hibernate schema auto-update is configured for development. For production, use a database migration strategy and review database, logging, and security settings.
+
+## License
+
+No license is specified in this repository. Add a license file if you intend to define permissions for reuse and distribution.
