@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Placement Management System</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">P</span>
+      <span class="brand-text">Placement<br>Management</span>
+    </div>
+    <nav id="nav" aria-label="Main navigation">
+      <a href="#dashboard" data-view="dashboard">Dashboard</a>
+      <a href="#students" data-view="students">Students</a>
+      <a href="#eligibility" data-view="eligibility">Eligibility</a>
+      <a href="#criteria" data-view="criteria">Placement Criteria</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <!-- Dashboard -->
+    <section id="view-dashboard" class="view" hidden>
+      <header class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="muted">Live figures from the placement database.</p>
+        </div>
+        <button id="btn-refresh" class="btn" type="button">Refresh</button>
+      </header>
+      <div id="dashboard-alert" class="alert" hidden></div>
+      <div class="stats">
+        <div class="card stat"><span class="stat-label">Total students</span><span id="stat-total" class="stat-value">…</span></div>
+        <div class="card stat"><span class="stat-label">Placement eligible</span><span id="stat-eligible" class="stat-value ok">…</span><span id="stat-eligible-hint" class="stat-hint">Eligible for at least one company</span></div>
+        <div class="card stat"><span class="stat-label">Not eligible</span><span id="stat-ineligible" class="stat-value no">…</span><span class="stat-hint">Eligible for no company</span></div>
+        <div class="card stat"><span class="stat-label">Already placed</span><span id="stat-placed" class="stat-value">…</span></div>
+      </div>
+      <div class="card">
+        <h2>Recent students</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Roll no.</th><th>Name</th><th class="num">CGPA</th><th class="num">Backlogs</th><th>Placement</th><th>Eligible for</th></tr></thead>
+            <tbody id="dashboard-recent"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Students -->
+    <section id="view-students" class="view" hidden>
+      <header class="page-header">
+        <div>
+          <h1>Students</h1>
+          <p class="muted">Register, update and remove student records.</p>
+        </div>
+        <button id="btn-add-student" class="btn primary" type="button">Register student</button>
+      </header>
+      <div id="students-alert" class="alert" hidden></div>
+      <div class="card">
+        <div class="toolbar">
+          <input id="student-search" type="search" placeholder="Search by name or roll number" aria-label="Search students">
+          <span id="students-count" class="muted"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Roll no.</th><th>Name</th><th>Department</th><th class="num">CGPA</th><th class="num">Backlogs</th><th>Placement</th><th class="actions-col">Actions</th></tr></thead>
+            <tbody id="students-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Eligibility -->
+    <section id="view-eligibility" class="view" hidden>
+      <header class="page-header">
+        <div>
+          <h1>Placement Eligibility</h1>
+          <p class="muted">Results are calculated by the backend eligibility engine.</p>
+        </div>
+      </header>
+      <div id="eligibility-alert" class="alert" hidden></div>
+      <div class="card">
+        <form id="eligibility-form" class="inline-form">
+          <div class="field">
+            <label for="elig-student">Student</label>
+            <select id="elig-student"></select>
+          </div>
+          <div class="field">
+            <label for="elig-company">Company</label>
+            <select id="elig-company"></select>
+          </div>
+          <button id="btn-check" class="btn primary" type="submit">Check eligibility</button>
+        </form>
+      </div>
+      <div id="elig-summary"></div>
+      <div id="elig-results" class="results"></div>
+    </section>
+
+    <!-- Criteria -->
+    <section id="view-criteria" class="view" hidden>
+      <header class="page-header">
+        <div>
+          <h1>Placement Criteria</h1>
+          <p class="muted">Company-specific minimum CGPA and maximum active backlogs.</p>
+        </div>
+        <button id="btn-add-criteria" class="btn primary" type="button">Add criteria</button>
+      </header>
+      <div id="criteria-alert" class="alert" hidden></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Company</th><th class="num">Minimum CGPA</th><th class="num">Max active backlogs</th><th class="actions-col">Actions</th></tr></thead>
+            <tbody id="criteria-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Student dialog -->
+<dialog id="student-dialog" aria-labelledby="student-dialog-title">
+  <form id="student-form" novalidate>
+    <h2 id="student-dialog-title">Register student</h2>
+    <p class="form-error" hidden></p>
+    <div class="grid2">
+      <div class="field">
+        <label for="s-rollNumber">Roll number</label>
+        <input id="s-rollNumber" name="rollNumber" maxlength="30" autocomplete="off">
+        <small class="error" data-error-for="rollNumber"></small>
+      </div>
+      <div class="field">
+        <label for="s-fullName">Full name</label>
+        <input id="s-fullName" name="fullName" maxlength="100" autocomplete="off">
+        <small class="error" data-error-for="fullName"></small>
+      </div>
+      <div class="field">
+        <label for="s-email">Email</label>
+        <input id="s-email" name="email" type="email" maxlength="150" autocomplete="off">
+        <small class="error" data-error-for="email"></small>
+      </div>
+      <div class="field">
+        <label for="s-department">Department</label>
+        <input id="s-department" name="department" maxlength="100" autocomplete="off">
+        <small class="error" data-error-for="department"></small>
+      </div>
+      <div class="field">
+        <label for="s-cgpa">CGPA (0.00 – 10.00)</label>
+        <input id="s-cgpa" name="cgpa" type="number" step="0.01" min="0" max="10" inputmode="decimal">
+        <small class="error" data-error-for="cgpa"></small>
+      </div>
+      <div class="field">
+        <label for="s-activeBacklogs">Active backlogs</label>
+        <input id="s-activeBacklogs" name="activeBacklogs" type="number" step="1" min="0" max="50" inputmode="numeric">
+        <small class="error" data-error-for="activeBacklogs"></small>
+      </div>
+      <div class="field">
+        <label for="s-placementStatus">Placement status</label>
+        <select id="s-placementStatus" name="placementStatus">
+          <option value="NOT_PLACED">Not placed</option>
+          <option value="PLACED">Placed</option>
+        </select>
+        <small class="error" data-error-for="placementStatus"></small>
+      </div>
+      <div class="field placed-only">
+        <label for="s-companyPlaced">Company placed</label>
+        <input id="s-companyPlaced" name="companyPlaced" maxlength="100" autocomplete="off">
+        <small class="error" data-error-for="companyPlaced"></small>
+      </div>
+      <div class="field placed-only">
+        <label for="s-packageLpa">Package (LPA)</label>
+        <input id="s-packageLpa" name="packageLpa" type="number" step="0.01" min="0" inputmode="decimal">
+        <small class="error" data-error-for="packageLpa"></small>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Criteria dialog -->
+<dialog id="criteria-dialog" aria-labelledby="criteria-dialog-title">
+  <form id="criteria-form" novalidate>
+    <h2 id="criteria-dialog-title">Add criteria</h2>
+    <p class="form-error" hidden></p>
+    <div class="field">
+      <label for="c-companyName">Company name</label>
+      <input id="c-companyName" name="companyName" maxlength="100" autocomplete="off">
+      <small class="error" data-error-for="companyName"></small>
+    </div>
+    <div class="field">
+      <label for="c-minCgpa">Minimum CGPA (0.00 – 10.00)</label>
+      <input id="c-minCgpa" name="minCgpa" type="number" step="0.01" min="0" max="10" inputmode="decimal">
+      <small class="error" data-error-for="minCgpa"></small>
+    </div>
+    <div class="field">
+      <label for="c-maxActiveBacklogs">Maximum active backlogs</label>
+      <input id="c-maxActiveBacklogs" name="maxActiveBacklogs" type="number" step="1" min="0" max="50" inputmode="numeric">
+      <small class="error" data-error-for="maxActiveBacklogs"></small>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Confirm dialog -->
+<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+  <form method="dialog">
+    <h2 id="confirm-title">Confirm</h2>
+    <p id="confirm-message"></p>
+    <div class="dialog-actions">
+      <button value="cancel" class="btn">Cancel</button>
+      <button id="confirm-ok" value="confirm" class="btn danger">Delete</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
